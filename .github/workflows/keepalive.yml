@@ -12,7 +12,7 @@ jobs:
       - name: Supabase anpingen
         run: |
           for i in 1 2 3; do
-            curl -sS -m 60 -o /dev/null -w "%{http_code}\n" "https://ggkvvsjornrzzmoxbcsn.supabase.co/rest/v1/fin_einstellungen?select=schluessel&limit=1" \
+            curl -fsS -m 60 -X POST "https://ggkvvsjornrzzmoxbcsn.supabase.co/rest/v1/rpc/fin_keepalive" -H "Content-Type: application/json" -d '{}' \
               -H "apikey: sb_publishable_vmJt7J9xVB7ovyQcOxZPRA__STAIpy6" && break
             sleep 20
           done

@@ -278,7 +278,8 @@ function szenarien() {
         ${kpi(`Übrig pro Monat ab ${ymKurz(v.ab)}`, eur(ueb), ueb < 0 ? 'Ihr zehrt von der Rücklage' : 'inkl. ETF-Sparplan', ueb < 0 ? 'hero bad' : 'hero')}
         ${kpi('Notgroschen voll', ymKurz(r.ngVoll), heute.ngVoll && r.ngVoll !== heute.ngVoll ? `heute: ${ymKurz(heute.ngVoll)}` : '')}
         ${kpi('Kredit frei', r.kreditFrei ? ymKurz(r.kreditFrei) : 'nach 2032', heute.kreditFrei && r.kreditFrei !== heute.kreditFrei ? `heute: ${ymKurz(heute.kreditFrei)}` : 'mit Rate 282 €: Aug 32')}
-        ${reichweite != null ? kpi('Rücklage reicht', `${reichweite} Monate`, r.ersterMinus ? `leer ab ${ymLang(r.ersterMinus)}` : '') : kpi('In 3 Jahren', eur(r.reihe[35].ruecklage + r.reihe[35].eigenkapital - r.reihe[35].schuld), 'Rücklage + Eigenkapital − Kredit')}
+        ${reichweite != null ? kpi('Rücklage reicht', `${reichweite} Monate`, r.ersterMinus ? `leer ab ${ymLang(r.ersterMinus)}` : '') : kpi('Tiefster Stand', eur(r.tiefster), 'Rücklage im Verlauf')}
+        ${kpi('In 3 Jahren', eur(r.reihe[35].ruecklage + r.reihe[35].eigenkapital - r.reihe[35].schuld), 'Rücklage + Eigenkapital − Kredit')}
       </div>
       <section class="card"><h2>Verlauf</h2><p class="note">Rücklage (grün), Kredit (rot) und Eigenkapital (blau) über drei Jahre.</p>${chart(r.reihe.slice(0, 36))}</section>
       ${r.ersterMinus ? `<section class="card warn"><h2>Achtung</h2><p>In diesem Szenario ist die Rücklage ab ${ymLang(r.ersterMinus)} aufgebraucht. Dann bräuchtet ihr ${eur(-ueb)} pro Monat weniger Ausgaben oder mehr Einnahmen.</p></section>` : ''}`;
