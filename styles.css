@@ -106,3 +106,4 @@ dialog::backdrop{background:rgb(0 0 0 / .4)}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tab-h) + 16px + env(safe-area-inset-bottom));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;z-index:20;font-size:14px;max-width:calc(100% - 32px)}
 :focus-visible{outline:2px solid var(--ok);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.who{color:var(--info);font-weight:600}

@@ -22,6 +22,7 @@ export const KATEGORIEN = {
   'Strom': 'wohnen',
   'Internet & Handy': 'wohnen',
   'Rundfunk': 'wohnen',
+  'Haushalt': 'wohnen',
   'Versicherungen': 'vorsorge',
   'BU-Versicherungen': 'vorsorge',
   'Altersvorsorge': 'vorsorge',
@@ -68,18 +69,31 @@ export const REGELN = [
   ['Auto', /BavariaDirekt|VW Leasing|Volkswagen Autovers|Kfz-Steuer|Bandel|Filterexperte|Autopflege|HEM Tankstelle|^HEM|JET |^JET|ARAL|SHELL|AVIA|Westfalen TS|eDalnice|MOL\.|Gasolineras|PARKEN|PAYBYPHONE|Parkhaus|EasyPark|P\. Lippstadt|Gottfried Schultz|Remscheid|Raiffeisen|Kreis Warendorf|Kreis Soest|BAT HH|Datgen|Tankstelle|ESSO|TOTAL/i],
   ['Studium', /SRH Fernhochschule/i],
   ['Abos & Streaming', /spotify|netflix|disney|rtl|youtube|apple services|sky marketing|openai|chat gpt|amazon digital|prime ?video|worldpay|sony interactive|nintendo|strato|grammarly|Ballspielverein|smartsteuer|Entgeltabrechnung|Kred-Zins|Abrechnung \d\d\.\d\d\.\d{4}/i],
+  ['Haushalt', /heunert|toom|jysk|ikea|bauhaus|obi |hornbach|baumarkt/i],
   ['Haustier', /zooplus|fressnapf|tierarzt|Kleintiere/i],
   ['Lebensmittel', /kaufland|rewe|aldi|lidl|edeka|picnic|hit |^HIT|netto|mercadona|alcampo|supermercado|koro|getr.nkeland|unibev|fleischmarkt|issam|brotfee|b.ckerei|backerei|SOEST 10|E\.S\. LA ZENIA|penny|marktkauf|feinkost/i],
   ['Drogerie & Gesundheit', /drogerie|^dm|dm\.dekuje|rossmann|apotheke|DOKTORABC|friseur|hair|barber|docmorris|female company|ditzi|mueller sagt|rituals|ringana|AaeA/i],
   ['Sport & Supplements', /fitmart|decathlon|intersport/i],
   ['Bargeld', /^GA NR|BARGELD|SB-EINZAHLUNG|GS 037/i],
   ['Reisen & Urlaub', /\/ES\/|\/ES$|ORIHUELA|LA ZENIA|ZENIA|ALICANTE|Praha|PRAHA|CZK|Ryanair|Airbnb|Flughafen|Airport|AEROPUERTO|Winterberg|SKILIFTE|PULLMAN|Uber|Starbucks|Taxibetrieb|Butik|Alla Schmidt|TERRASSA|Rogue kitchen|BASSUS/i],
-  ['Restaurants & Lieferdienst', /hosselmann|mcdonalds|mc donalds|burger|doner|döner|doener|kebab|glovo|takeaway|lieferando|sushi|steak|restaurant|cafe|kaffee|brauhaus|beef club|asia|kaishi|frittenlabor|brunch|bistro|barraca|pint depot|appetit|housen|PS M Schmitz|Junkers|Fromme|SUPER POP|FAVOLA|Popeyes|trdelnik|moenchshof|mönchshof|krafin|Melissa|Kroka/i],
-  ['Kleidung & Shopping', /h\+m|hm es|zara|pull and bear|bershka|stradivarius|lefties|nike|foot locker|new yorker|vero moda|zalando|shein|infinite styles|otto|goldkindchen|little dutch|reisenthel|jysk|action|tedi|toom|nanu nana|miele|alehop|rebuy|momox|polinesia|mangopay|klarna|riverty|tabak|cineplex|Rudolf-Weber|FKP SCORPIO|CentrO|Schulte Maerter|Deutsche Post|GrussGruss|Venue|Rpm\.Service|DPP\.Tramv|DPCZN|SB\.Mustek|PLK\.PRAHA|WH SMITH|Drahtseile/i],
+  ['Restaurants & Lieferdienst', /hosselmann|mcdonalds|mc donalds|burger|doner|döner|doener|kebab|glovo|takeaway|lieferando|sushi|steak|restaurant|cafe|kaffee|brauhaus|beef club|asia|kaishi|frittenlabor|brunch|bistro|barraca|pint depot|appetit|housen|PS M Schmitz|Junkers|Fromme|SUPER POP|FAVOLA|Popeyes|trdelnik|Peran Ali|moenchshof|mönchshof|krafin|Melissa|Kroka/i],
+  ['Kleidung & Shopping', /h\+m|hm es|zara|pull and bear|bershka|stradivarius|lefties|nike|foot locker|new yorker|vero moda|zalando|shein|infinite styles|otto|goldkindchen|little dutch|reisenthel|action|tedi|nanu nana|miele|alehop|rebuy|momox|polinesia|mangopay|klarna|riverty|tabak|cineplex|Rudolf-Weber|FKP SCORPIO|CentrO|Schulte Maerter|Deutsche Post|GrussGruss|Venue|Rpm\.Service|DPP\.Tramv|DPCZN|SB\.Mustek|PLK\.PRAHA|WH SMITH|Drahtseile/i],
   ['Amazon', /amazon|amzn/i],
   ['Geschenke', /blumen|flora-point|JGA|smyths/i],
   ['Familie & Freunde', /WUCKERT|EDUARD UND ALLA|Eduard und Alla|Florian Markus|Phillip Lehmann|SWETLANA MARKUS|Anastasios Roumis|Serhan Demirtas|Stadt Soest|Kevin Schmidt$|KEVIN SCHMIDT/i],
 ];
+
+export const PERSONEN = { gemeinsam: 'Gemeinsam', kevin: 'Kevin', angelika: 'Angelika' };
+// Ausgaben, die nur eine Person betreffen
+export const PERSON_REGELN = [
+  ['kevin', /DOKTORABC|Lohn-Gehalt/i],
+  ['angelika', /Verdienstabrechnung|Saatveredelung/i],
+];
+export function personFuer({ empfaenger = '', zweck = '' }) {
+  const hay = `${empfaenger}|${zweck}`;
+  for (const [p, rx] of PERSON_REGELN) if (rx.test(hay)) return p;
+  return 'gemeinsam';
+}
 
 export function kategorisieren({ empfaenger = '', zweck = '', iban = '', text = '' }) {
   const hay = `${empfaenger}|${zweck}|${iban}|${text}`;
@@ -153,6 +167,6 @@ export function parseCsv(text) {
     const basis = `${u.konto}|${u.datum}|${u.betrag.toFixed(2)}|${u.empfaenger}|${u.zweck.slice(0, 60)}`;
     const n = (zaehler.get(basis) || 0) + 1; zaehler.set(basis, n);
     const kategorie = kategorisieren(u);
-    return { ...u, schluessel: `${basis}|${n}`, kategorie };
+    return { ...u, schluessel: `${basis}|${n}`, kategorie, person: personFuer(u) };
   });
 }

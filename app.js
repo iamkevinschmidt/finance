@@ -1,5 +1,5 @@
 import { auth, db } from './api.js';
-import { BEREICHE, KATEGORIEN, parseCsv } from './kategorien.js';
+import { BEREICHE, KATEGORIEN, PERSONEN, parseCsv } from './kategorien.js';
 import { simulieren, restschuld, monatPlus } from './rechner.js';
 
 // ---------- Hilfen ----------
@@ -33,7 +33,7 @@ async function laden() {
     db.select('fin_mitglieder', `select=*&user_id=eq.${auth.user.id}`),
     db.select('fin_konten', 'select=*&order=sort'),
     db.select('fin_posten', 'select=*&order=sort'),
-    db.select('fin_buchungen', 'select=id,datum,konto,empfaenger,zweck,betrag,kategorie&order=datum.desc&limit=5000'),
+    db.select('fin_buchungen', 'select=id,datum,konto,empfaenger,zweck,betrag,kategorie,person,notiz&order=datum.desc&limit=5000'),
     db.select('fin_ziele', 'select=*&order=sort'),
     db.select('fin_massnahmen', 'select=*&order=monat.asc.nullslast,erstellt'),
     db.select('fin_szenarien', 'select=*&order=erstellt.desc'),
@@ -366,31 +366,37 @@ function massnahmeBearbeiten(m) {
 }
 
 // ---------- Buchungen ----------
-let filter = { monat: '', kat: '', q: '' };
+let filter = { monat: '', kat: '', person: '', q: '' };
 function buchungen() {
   const monate = [...new Set(S.buchungen.map((b) => b.datum.slice(0, 7)))];
   if (!filter.monat && monate[0]) filter.monat = monate[0];
   seite('mehr', 'Umsätze', `${S.buchungen.length.toLocaleString('de-DE')} Buchungen`, `
   <section class="card form"><div class="two">${auswahl('f-monat', 'Monat', [['', 'Alle'], ...monate.map((m) => [m, ymLang(m)])], filter.monat)}
     ${auswahl('f-kat', 'Kategorie', [['', 'Alle'], ...Object.keys(KATEGORIEN).map((k) => [k, k])], filter.kat)}</div>
+    ${auswahl('f-person', 'Für wen', [['', 'Alle'], ...Object.entries(PERSONEN)], filter.person)}
     ${feld('f-q', 'Suchen', filter.q, 'search', 'placeholder="z. B. Rewe, Tankstelle"')}</section>
   <section class="card"><div id="kopf" class="row2 total"></div><div class="list" id="liste"></div></section>`);
   const zeichnen = () => {
-    filter = { monat: $('#f-monat').value, kat: $('#f-kat').value, q: $('#f-q').value.trim().toLowerCase() };
-    const l = S.buchungen.filter((b) => (!filter.monat || b.datum.startsWith(filter.monat)) && (!filter.kat || b.kategorie === filter.kat) && (!filter.q || `${b.empfaenger} ${b.zweck} ${b.kategorie}`.toLowerCase().includes(filter.q)));
+    filter = { monat: $('#f-monat').value, kat: $('#f-kat').value, person: $('#f-person').value, q: $('#f-q').value.trim().toLowerCase() };
+    const l = S.buchungen.filter((b) => (!filter.monat || b.datum.startsWith(filter.monat)) && (!filter.kat || b.kategorie === filter.kat) && (!filter.person || b.person === filter.person) && (!filter.q || `${b.empfaenger} ${b.zweck} ${b.kategorie} ${b.notiz || ''}`.toLowerCase().includes(filter.q)));
     const zaehlend = l.filter((b) => ZAEHLT(b.kategorie));
     const ein = zaehlend.filter((b) => b.betrag > 0).reduce((s, b) => s + Number(b.betrag), 0), aus = zaehlend.filter((b) => b.betrag < 0).reduce((s, b) => s + Number(b.betrag), 0);
     $('#kopf').innerHTML = `<span>${l.length} Umsätze</span><span><span class="pos">${eur(ein)}</span> · <span class="neg">${eur(aus)}</span></span>`;
-    $('#liste').innerHTML = l.slice(0, 300).map((b) => `<button class="row as-btn" data-b="${b.id}" ${istAdmin() ? '' : 'disabled'}><div class="main"><div class="t">${h(b.empfaenger || '–')}</div><div class="m">${dt(b.datum)} · ${h(b.kategorie)} · ${h(b.konto)}</div></div><div class="r ${b.betrag < 0 ? '' : 'pos'}">${eur2(b.betrag)}</div></button>`).join('') + (l.length > 300 ? '<p class="muted">Die ersten 300 angezeigt. Filter nutzen für mehr.</p>' : '');
+    $('#liste').innerHTML = l.slice(0, 300).map((b) => `<button class="row as-btn" data-b="${b.id}" ${istAdmin() ? '' : 'disabled'}><div class="main"><div class="t">${h(b.empfaenger || '–')}</div><div class="m">${dt(b.datum)} · ${h(b.kategorie)}${b.person !== 'gemeinsam' ? ` · <b class="who">${h(PERSONEN[b.person])}</b>` : ''}${b.notiz ? ` · ${h(b.notiz)}` : ''}</div></div><div class="r ${b.betrag < 0 ? '' : 'pos'}">${eur2(b.betrag)}</div></button>`).join('') + (l.length > 300 ? '<p class="muted">Die ersten 300 angezeigt. Filter nutzen für mehr.</p>' : '');
     $$('[data-b]').forEach((btn) => { btn.onclick = () => buchungBearbeiten(S.buchungen.find((b) => String(b.id) === btn.dataset.b)); });
   };
-  ['#f-monat', '#f-kat', '#f-q'].forEach((s) => $(s).addEventListener('input', zeichnen));
+  ['#f-monat', '#f-kat', '#f-person', '#f-q'].forEach((s) => $(s).addEventListener('input', zeichnen));
   zeichnen();
 }
 function buchungBearbeiten(b) {
   sheet('Umsatz', `<p><b>${h(b.empfaenger)}</b><br><span class="muted">${dt(b.datum)} · ${h(b.konto)} · ${eur2(b.betrag)}</span></p>${b.zweck ? `<p class="muted small">${h(b.zweck)}</p>` : ''}
-    ${auswahl('b-kat', 'Kategorie', Object.keys(KATEGORIEN).map((k) => [k, `${k} (${BEREICHE[KATEGORIEN[k]]})`]), b.kategorie)}`,
-  async (d) => { Object.assign(b, (await db.update('fin_buchungen', b.id, { kategorie: $('#b-kat', d).value, manuell: true }))[0]); toast('Kategorie geändert'); buchungen(); });
+    ${auswahl('b-kat', 'Kategorie', Object.keys(KATEGORIEN).map((k) => [k, `${k} (${BEREICHE[KATEGORIEN[k]]})`]), b.kategorie)}
+    ${auswahl('b-person', 'Für wen', Object.entries(PERSONEN), b.person || 'gemeinsam')}
+    ${feld('b-notiz', 'Notiz', b.notiz || '', 'text', 'placeholder="z. B. Toilettendeckel"')}`,
+  async (d) => {
+    Object.assign(b, (await db.update('fin_buchungen', b.id, { kategorie: $('#b-kat', d).value, person: $('#b-person', d).value, notiz: $('#b-notiz', d).value.trim() || null, manuell: true }))[0]);
+    toast('Gespeichert'); buchungen();
+  });
 }
 
 // ---------- Mehr ----------
@@ -434,13 +440,13 @@ async function importieren(datei) {
     let text = new TextDecoder('utf-8').decode(buf);
     if (text.includes('�')) text = new TextDecoder('windows-1252').decode(buf); // Sparkasse exportiert in Latin-1
     const umsaetze = parseCsv(text);
-    const zeilen = umsaetze.map((u) => ({ schluessel: u.schluessel, datum: u.datum, konto: u.konto, empfaenger: u.empfaenger, zweck: u.zweck, betrag: u.betrag, kategorie: u.kategorie }));
+    const zeilen = umsaetze.map((u) => ({ schluessel: u.schluessel, datum: u.datum, konto: u.konto, empfaenger: u.empfaenger, zweck: u.zweck, betrag: u.betrag, kategorie: u.kategorie, person: u.person }));
     let neu = [];
     for (let i = 0; i < zeilen.length; i += 500) neu = neu.concat(await db.upsertIgnore('fin_buchungen', zeilen.slice(i, i + 500), 'schluessel'));
     const sonst = neu.filter((n) => n.kategorie === 'Sonstiges').length;
     box.innerHTML = `<p><b>${neu.length} neue Umsätze</b> übernommen, ${zeilen.length - neu.length} waren schon da.${sonst ? ` ${sonst} davon unter „Sonstiges“, bitte kurz zuordnen.` : ''}</p>${sonst ? '<a class="link" href="#/buchungen" id="zuordnen">Jetzt zuordnen</a>' : ''}`;
     S.geladen = false; await laden();
-    if ($('#zuordnen')) $('#zuordnen').onclick = () => { filter = { monat: '', kat: 'Sonstiges', q: '' }; };
+    if ($('#zuordnen')) $('#zuordnen').onclick = () => { filter = { monat: '', kat: 'Sonstiges', person: '', q: '' }; };
   } catch (e) { box.innerHTML = `<p class="err">${h(e.message)}</p>`; }
 }
 
