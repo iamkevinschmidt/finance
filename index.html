@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Finanzen</title>
+<meta name="theme-color" content="#14332b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Finanzen">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app"><div class="boot">Finanzen werden geladen …</div></div>
+<nav id="tabs" hidden>
+  <a href="#/" data-tab="start"><span class="ti">◐</span>Übersicht</a>
+  <a href="#/budget" data-tab="budget"><span class="ti">☰</span>Budget</a>
+  <a href="#/szenarien" data-tab="szenarien"><span class="ti">⇄</span>Szenarien</a>
+  <a href="#/plan" data-tab="plan"><span class="ti">✓</span>Plan</a>
+  <a href="#/mehr" data-tab="mehr"><span class="ti">⋯</span>Mehr</a>
+</nav>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
