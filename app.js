@@ -53,8 +53,20 @@ function kreditHeute() {
   const bis = heute.getDate() >= 30 ? ymNow() : monatPlus(ymNow(), -1);
   return restschuld(Math.abs(Number(k.saldo)), k.stand.slice(0, 7), bis, Number(k.zins) || 0, Number(k.rate) || 0);
 }
+// Girokonto: letzter bekannter Stand plus alle danach eingelesenen Umsätze dieses Kontos
+function saldo(k) {
+  if (k.art !== 'giro') return Number(k.saldo);
+  const bank = k.name.split(' ')[0];
+  return Number(k.saldo) + S.buchungen.filter((b) => b.konto === bank && b.datum > k.stand).reduce((s, b) => s + Number(b.betrag), 0);
+}
+function saldoStand(k) {
+  if (k.art !== 'giro') return k.stand;
+  const bank = k.name.split(' ')[0];
+  const l = S.buchungen.find((b) => b.konto === bank);
+  return l && l.datum > k.stand ? l.datum : k.stand;
+}
 const ruecklage = () => S.konten.filter((k) => k.zaehlt_als_notgroschen).reduce((s, k) => s + Number(k.saldo), 0);
-const vermoegen = () => S.konten.filter((k) => k.art !== 'kredit').reduce((s, k) => s + Number(k.saldo), 0) - kreditHeute();
+const vermoegen = () => S.konten.filter((k) => k.art !== 'kredit').reduce((s, k) => s + saldo(k), 0) - kreditHeute();
 const aktivePosten = (typ) => S.posten.filter((p) => p.aktiv && p.typ === typ);
 const summe = (l, f = 'betrag') => l.reduce((s, p) => s + Number(p[f] ?? p.betrag ?? 0), 0);
 function plan(feld = 'betrag') {
@@ -155,7 +167,7 @@ function start() {
   const flex = aktivePosten('ausgabe').filter((x) => x.ziel != null).map((x) => ({ ...x, ist: ist[x.kategorie] || 0 }));
   seite('start', 'Finanzen', `Stand ${dt(new Date().toISOString().slice(0, 10))}`, `
   <div class="kpis">
-    ${kpi('Vermögen netto', eur(vermoegen()), 'Konten + Depot − Kredit', 'hero')}
+    ${kpi('Vermögen netto', eur(vermoegen()), 'Konten, ETFs und Rentenversicherungen minus Kredit', 'hero')}
     ${kpi('Notgroschen', eur(rl), `${Math.round((rl / ziel) * 100)} % von ${eur(ziel)}`)}
     ${kpi('Kredit offen', eur(ks), k ? `${eur(k.rate)}/Monat, ${String(k.zins).replace('.', ',')} %` : '')}
     ${kpi('Plan pro Monat', eur(p.frei), 'übrig nach allen Ausgaben')}
@@ -167,7 +179,7 @@ function start() {
     <div class="legend"><span><i class="in"></i>Einnahmen</span><span><i class="out"></i>Ausgaben</span></div></section>
   <section class="card"><h2>Budget ${ymLang(ym)}</h2><p class="note">Flexible Posten: Ist gegen Ziel.${letzter ? ` Umsätze bis ${dt(letzter)}.` : ''}</p>
     <div class="list">${flex.map((x) => `<div class="brow"><div class="bt"><span>${h(x.kategorie)}</span><span class="${x.ist > x.ziel ? 'neg' : 'muted'}">${eur(x.ist)} / ${eur(x.ziel)}</span></div>${balken(x.ist, x.ziel, x.ist > x.ziel ? 'bad' : 'ok')}</div>`).join('') || '<p class="muted">Noch keine Budgetziele.</p>'}</div></section>
-  <section class="card"><h2>Konten</h2><div class="list">${S.konten.map((k2) => `<div class="row"><div class="main"><div class="t">${h(k2.name)}</div><div class="m">Stand ${dt(k2.stand)}${k2.zaehlt_als_notgroschen ? ' · Notgroschen' : ''}</div></div><div class="r ${k2.art === 'kredit' ? 'neg' : ''}">${eur2(k2.art === 'kredit' ? -kreditHeute() : k2.saldo)}</div></div>`).join('')}</div>
+  <section class="card"><h2>Konten</h2><div class="list">${S.konten.map((k2) => `<div class="row"><div class="main"><div class="t">${h(k2.name)}</div><div class="m">Stand ${dt(saldoStand(k2))}${k2.zaehlt_als_notgroschen ? ' · Notgroschen' : ''}${k2.art === 'vorsorge' ? ' · Altersvorsorge' : ''}</div></div><div class="r ${k2.art === 'kredit' ? 'neg' : ''}">${eur2(k2.art === 'kredit' ? -kreditHeute() : saldo(k2))}</div></div>`).join('')}</div>
     ${istAdmin() ? '<a class="link" href="#/mehr">Kontostände aktualisieren</a>' : ''}</section>`);
 }
 
@@ -405,7 +417,7 @@ function mehr() {
   <section class="card"><a class="row" href="#/buchungen"><div class="main"><div class="t">Alle Umsätze</div><div class="m">${S.buchungen.length.toLocaleString('de-DE')} Buchungen, suchen und zuordnen</div></div><div class="r">›</div></a></section>
   ${istAdmin() ? `<section class="card"><h2>Kontoauszug einlesen</h2><p class="note">CSV-Export der Sparkasse (oder DKB). Bereits vorhandene Umsätze werden übersprungen, neue automatisch einsortiert.</p>
     <label class="btn file">CSV-Datei wählen<input id="csv" type="file" accept=".csv,text/csv" hidden></label><div id="import"></div></section>
-  <section class="card"><h2>Kontostände</h2><p class="note">Tippen zum Aktualisieren.</p><div class="list">${S.konten.map((k) => `<button class="row as-btn" data-k="${k.id}"><div class="main"><div class="t">${h(k.name)}</div><div class="m">Stand ${dt(k.stand)}${k.notiz ? ` · ${h(k.notiz)}` : ''}</div></div><div class="r">${eur2(k.saldo)}</div></button>`).join('')}</div>
+  <section class="card"><h2>Kontostände</h2><p class="note">Tippen zum Aktualisieren.</p><div class="list">${S.konten.map((k) => `<button class="row as-btn" data-k="${k.id}"><div class="main"><div class="t">${h(k.name)}</div><div class="m">Stand ${dt(saldoStand(k))}${k.notiz ? ` · ${h(k.notiz)}` : ''}</div></div><div class="r">${eur2(k.art === 'kredit' ? -kreditHeute() : saldo(k))}</div></button>`).join('')}</div>
     <button class="link as-link" id="kneu">Konto hinzufügen</button></section>
   <section class="card form"><h2>Notgroschen-Ziel</h2>${feld('ngz', 'Ziel in €', ngZiel(), 'number', 'step="500" inputmode="numeric"')}<button class="btn ghost" id="ngzs">Speichern</button></section>` : ''}
   <section class="card"><h2>Konto</h2><p class="muted">${h(auth.user.email)} · ${istAdmin() ? 'Verwalter' : 'Nur lesen'}</p>
@@ -419,7 +431,7 @@ function mehr() {
   $('#kneu').onclick = () => kontoBearbeiten(null);
   $('#ngzs').onclick = async () => { const w = num($('#ngz').value); await db.upsertKey('fin_einstellungen', [{ schluessel: 'notgroschen_ziel', wert: w }]); S.einst.notgroschen_ziel = w; toast('Gespeichert'); };
 }
-const ARTEN = { giro: 'Girokonto', tagesgeld: 'Tagesgeld / Cash', depot: 'Depot', kredit: 'Kredit', sonstiges: 'Sonstiges' };
+const ARTEN = { giro: 'Girokonto', tagesgeld: 'Tagesgeld / Cash', depot: 'Depot', vorsorge: 'Altersvorsorge', kredit: 'Kredit', sonstiges: 'Sonstiges' };
 function kontoBearbeiten(k) {
   sheet(k ? k.name : 'Neues Konto', `${feld('k-name', 'Name', k?.name || '')}${auswahl('k-art', 'Art', Object.entries(ARTEN), k?.art || 'giro')}
     <div class="two">${feld('k-saldo', k?.art === 'kredit' ? 'Restschuld (negativ)' : 'Kontostand', k ? String(k.saldo).replace('.', ',') : '', 'text', 'inputmode="decimal"')}${feld('k-stand', 'Stand vom', k?.stand || new Date().toISOString().slice(0, 10), 'date')}</div>
